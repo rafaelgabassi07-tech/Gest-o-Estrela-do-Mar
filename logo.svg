@@ -1,54 +1,74 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
+    <!-- Gradiente do Mar (Fundo) -->
     <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#0f4c81;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0a2e4f;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#0284c7;stop-opacity:1" /> <!-- Sky Blue -->
+      <stop offset="100%" style="stop-color:#0c4a6e;stop-opacity:1" /> <!-- Deep Ocean -->
     </linearGradient>
-    <linearGradient id="starGrad" x1="50%" y1="0%" x2="50%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#ff8c00;stop-opacity:1" />
-    </linearGradient>
-    <filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
-        <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.3"/>
+
+    <!-- Gradiente da Estrela (Laranja para Amarelo) -->
+    <radialGradient id="starfishGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" /> <!-- Amber/Yellow Center -->
+      <stop offset="60%" style="stop-color:#f59e0b;stop-opacity:1" /> <!-- Orange Middle -->
+      <stop offset="100%" style="stop-color:#ea580c;stop-opacity:1" /> <!-- Deep Orange Tips -->
+    </radialGradient>
+
+    <!-- Sombra suave para dar profundidade -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.25"/>
     </filter>
   </defs>
 
-  <!-- Fundo Oceano -->
+  <!-- Fundo Circular (Ícone de App) -->
   <circle cx="256" cy="256" r="256" fill="url(#oceanGrad)" />
-  
-  <!-- Bolhas Decorativas -->
-  <circle cx="100" cy="150" r="15" fill="white" opacity="0.1" />
+
+  <!-- Bolhas sutis no fundo para ambientação -->
+  <circle cx="100" cy="120" r="12" fill="white" opacity="0.15" />
+  <circle cx="400" cy="380" r="18" fill="white" opacity="0.1" />
+  <circle cx="420" cy="100" r="8" fill="white" opacity="0.15" />
   <circle cx="80" cy="350" r="25" fill="white" opacity="0.1" />
-  <circle cx="420" cy="100" r="10" fill="white" opacity="0.1" />
-  <circle cx="450" cy="300" r="20" fill="white" opacity="0.1" />
-  <circle cx="256" cy="450" r="12" fill="white" opacity="0.1" />
 
-  <!-- Círculo Branco Interno (Bússola/Logo mark) -->
-  <circle cx="256" cy="230" r="130" fill="none" stroke="white" stroke-width="8" opacity="0.8" />
-  <circle cx="256" cy="230" r="110" fill="none" stroke="white" stroke-width="2" opacity="0.4" />
-
-  <!-- Estrela do Mar Centralizada -->
-  <g transform="translate(256, 230) scale(1.1)">
-    <!-- Formato Estrela -->
-    <path d="M0,-110 L25,-25 L110,-20 L40,30 L60,110 L0,60 L-60,110 L-40,30 L-110,-20 L-25,-25 Z" fill="url(#starGrad)" filter="url(#dropShadow)" stroke="#d97706" stroke-width="2" />
+  <!-- A Estrela do Mar (Forma Orgânica) -->
+  <g filter="url(#softShadow)">
+    <!-- Braços arredondados e orgânicos -->
+    <path d="M256 60 
+             C270 120, 300 180, 360 190 
+             C430 200, 460 210, 470 240 
+             C460 270, 400 290, 360 320 
+             C330 350, 340 420, 320 460 
+             C300 490, 270 420, 256 380 
+             C242 420, 212 490, 192 460 
+             C172 420, 182 350, 152 320 
+             C112 290, 52 270, 42 240 
+             C52 210, 82 200, 152 190 
+             C212 180, 242 120, 256 60 Z" 
+          fill="url(#starfishGrad)" 
+          stroke="#c2410c" 
+          stroke-width="2" 
+          stroke-linejoin="round"/>
     
-    <!-- Detalhes da Estrela (Textura) -->
-    <circle cx="0" cy="0" r="8" fill="#fff7ed" opacity="0.6" />
-    <circle cx="0" cy="-60" r="4" fill="#fff7ed" opacity="0.4" />
-    <circle cx="60" cy="60" r="4" fill="#fff7ed" opacity="0.4" />
-    <circle cx="-60" cy="60" r="4" fill="#fff7ed" opacity="0.4" />
-    <circle cx="-60" cy="-20" r="4" fill="#fff7ed" opacity="0.4" />
-    <circle cx="60" cy="-20" r="4" fill="#fff7ed" opacity="0.4" />
-  </g>
+    <!-- Textura da Estrela (Poros/Detalhes) -->
+    <!-- Centro -->
+    <circle cx="256" cy="256" r="8" fill="#fff7ed" opacity="0.6" />
+    
+    <!-- Braço Superior -->
+    <circle cx="256" cy="150" r="5" fill="#fff7ed" opacity="0.5" />
+    <circle cx="256" cy="100" r="4" fill="#fff7ed" opacity="0.4" />
+    
+    <!-- Braço Direito -->
+    <circle cx="360" cy="220" r="5" fill="#fff7ed" opacity="0.5" />
+    <circle cx="420" cy="230" r="4" fill="#fff7ed" opacity="0.4" />
+    
+    <!-- Braço Esquerdo -->
+    <circle cx="152" cy="220" r="5" fill="#fff7ed" opacity="0.5" />
+    <circle cx="92" cy="230" r="4" fill="#fff7ed" opacity="0.4" />
+    
+    <!-- Braço Inf Direito -->
+    <circle cx="320" cy="350" r="5" fill="#fff7ed" opacity="0.5" />
+    <circle cx="300" cy="410" r="4" fill="#fff7ed" opacity="0.4" />
 
-  <!-- Texto Curvo -->
-  <path id="curve" d="M 60,380 Q 256,430 452,380" fill="transparent" />
-  <text width="512" font-family="serif" font-weight="bold" font-size="65" fill="white" text-anchor="middle" letter-spacing="2">
-    <textPath xlink:href="#curve" startOffset="50%">
-      Estrela do Mar
-    </textPath>
-  </text>
-  
-  <!-- Onda decorativa abaixo do texto -->
-  <path d="M 140,430 Q 256,460 372,430" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.8" />
+    <!-- Braço Inf Esquerdo -->
+    <circle cx="192" cy="350" r="5" fill="#fff7ed" opacity="0.5" />
+    <circle cx="212" cy="410" r="4" fill="#fff7ed" opacity="0.4" />
+  </g>
 </svg>

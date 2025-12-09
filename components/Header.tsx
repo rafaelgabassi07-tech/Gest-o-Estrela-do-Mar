@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({ kioskName, themeMode, setThemeMode, onO
             whileTap={{ scale: 0.95 }}
             className="w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg flex items-center justify-center cursor-pointer overflow-hidden border-2 border-white dark:border-slate-700"
           >
-             <img src="/logo.svg" alt="Logo Estrela do Mar" className="w-full h-full object-cover" />
+             <img src="/logo.svg?v=4" alt="Logo Estrela do Mar" className="w-full h-full object-cover" />
           </motion.div>
           <div className="flex flex-col">
             <h1 className="text-lg sm:text-2xl font-black leading-none tracking-tight text-gray-900 dark:text-white truncate max-w-[150px] sm:max-w-xs transition-colors">{kioskName}</h1>

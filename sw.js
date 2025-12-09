@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quiosque-app-v2';
+const CACHE_NAME = 'quiosque-app-v4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -23,10 +23,12 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName); // Limpa cache antigo (com logo errada)
+            return caches.delete(cacheName); // Limpa cache antigo
           }
         })
       );
+    }).then(() => {
+      return self.clients.claim(); // Assume controle da página imediatamente
     })
   );
 });

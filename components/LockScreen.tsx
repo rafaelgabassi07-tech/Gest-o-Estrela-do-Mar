@@ -30,7 +30,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ kioskName, onUnlock }) => {
         className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center border border-slate-700"
       >
         <div className="w-32 h-32 rounded-full overflow-hidden shadow-2xl mx-auto mb-6 border-4 border-slate-100 dark:border-slate-700">
-          <img src="/logo.svg" alt="Logo" className="w-full h-full object-cover" />
+          <img src="/logo.svg?v=4" alt="Logo" className="w-full h-full object-cover" />
         </div>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{kioskName}</h2>
         <p className="text-sm text-gray-500 mb-6">Insira o PIN para acessar</p>
