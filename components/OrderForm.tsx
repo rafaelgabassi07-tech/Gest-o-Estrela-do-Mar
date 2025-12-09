@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Order, OrderItem, PaymentMethod } from '../types';
@@ -408,7 +409,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
             {(settings.products || []).length === 0 && (
                 <div className="flex flex-col items-center justify-center h-48 text-center text-gray-400">
                     <p className="text-sm font-bold mb-1">Cardápio Vazio</p>
-                    <p className="text-xs">Vá em Ajustes > Cardápio para cadastrar.</p>
+                    <p className="text-xs">Vá em Ajustes &gt; Cardápio para cadastrar.</p>
                 </div>
             )}
         </div>
