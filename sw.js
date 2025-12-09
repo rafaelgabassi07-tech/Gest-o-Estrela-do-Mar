@@ -1,10 +1,10 @@
-const CACHE_NAME = 'quiosque-app-v4';
+const CACHE_NAME = 'quiosque-app-v5';
 const urlsToCache = [
   '/',
   '/index.html',
   '/index.tsx',
   '/manifest.json',
-  '/logo.svg'
+  '/logo.svg?v=5'
 ];
 
 self.addEventListener('install', event => {
