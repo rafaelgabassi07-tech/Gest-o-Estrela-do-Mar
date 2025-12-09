@@ -1,18 +1,14 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 /**
  * Calls the Gemini API to get an analysis of monthly financial data.
  * @param data A string representation of the monthly expenses and income.
  * @returns A promise that resolves to the AI's analysis in markdown format.
- * @throws Error if API_KEY is not defined or if the API call fails.
+ * @throws Error if the API call fails.
  */
 export async function getMonthlyAnalysis(data: string): Promise<string> {
-  if (!process.env.API_KEY) {
-    throw new Error("API_KEY is not defined. Please set the environment variable.");
-  }
-
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
   const prompt = `
     Você é um assistente financeiro especializado em pequenos comércios (quiosque de praia).
     Analise os seguintes dados financeiros do mês.
@@ -36,17 +32,15 @@ export async function getMonthlyAnalysis(data: string): Promise<string> {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview', // Using a Pro model for better analytical capabilities.
-      contents: [{ parts: [{ text: prompt }] }],
+      model: 'gemini-2.5-flash', // Optimized for speed and cost
+      contents: prompt,
       config: {
         temperature: 0.7,
-        maxOutputTokens: 1000,
-        thinkingConfig: { thinkingBudget: 200 }, // Allocate some tokens for thinking
       },
     });
     return response.text ?? 'Nenhuma análise disponível.';
   } catch (error) {
     console.error('Erro ao buscar análise Gemini:', error);
-    throw new Error('Falha ao obter análise mensal da IA. Por favor, tente novamente.');
+    throw new Error('Falha ao obter análise mensal da IA. Verifique sua conexão ou a chave de API.');
   }
 }
