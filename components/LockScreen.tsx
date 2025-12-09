@@ -1,12 +1,14 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface LockScreenProps {
   kioskName: string;
   onUnlock: (pin: string) => boolean;
+  customLogo?: string | null;
 }
 
-const LockScreen: React.FC<LockScreenProps> = ({ kioskName, onUnlock }) => {
+const LockScreen: React.FC<LockScreenProps> = ({ kioskName, onUnlock, customLogo }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
 
@@ -29,8 +31,14 @@ const LockScreen: React.FC<LockScreenProps> = ({ kioskName, onUnlock }) => {
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
         className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center border border-slate-700"
       >
-        <div className="w-32 h-32 rounded-full overflow-hidden shadow-2xl mx-auto mb-6 border-4 border-slate-100 dark:border-slate-700">
-          <img src="/logo.svg?v=5" alt="Logo" className="w-full h-full object-cover" />
+        <div className="w-32 h-32 rounded-full overflow-hidden shadow-2xl mx-auto mb-6 border-4 border-slate-100 dark:border-slate-700 bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+          {customLogo ? (
+            <img src={customLogo} alt="Logo" className="w-full h-full object-cover" />
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-12 h-12 text-gray-300 dark:text-gray-500">
+              <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
+            </svg>
+          )}
         </div>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{kioskName}</h2>
         <p className="text-sm text-gray-500 mb-6">Insira o PIN para acessar</p>

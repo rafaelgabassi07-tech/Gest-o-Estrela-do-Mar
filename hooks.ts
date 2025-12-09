@@ -36,6 +36,7 @@ export const useSettingsManager = () => {
     kioskName: 'Estrela do Mar',
     ownerName: '',
     contactPhone: '',
+    logoUrl: null,
     monthlyGoal: 10000,
     fees: { credit: 3.5, debit: 1.5, pix: 0 },
     securityPin: null,
@@ -122,10 +123,16 @@ export const useOrderManager = () => {
     setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
   };
 
-  const closeOrder = (orderId: string, paymentMethod: any) => { // Type 'any' for PaymentMethod import ease, usually explicit
+  // UPDATED: Now accepts the full updated order object to ensure totals/items are correct
+  const closeOrder = (finalOrder: Order, paymentMethod: any) => { 
     setOrders((prev) => prev.map((o) => 
-      o.id === orderId 
-        ? { ...o, status: 'closed', closedAt: new Date().toISOString(), paymentMethod } 
+      o.id === finalOrder.id 
+        ? { 
+            ...finalOrder, // Save items, totals, fees from the form
+            status: 'closed', 
+            closedAt: new Date().toISOString(), 
+            paymentMethod 
+          } 
         : o
     ));
   };

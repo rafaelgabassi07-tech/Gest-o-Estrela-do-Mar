@@ -1,14 +1,14 @@
-const CACHE_NAME = 'quiosque-app-v5';
+const CACHE_NAME = 'quiosque-app-v6';
 const urlsToCache = [
   '/',
   '/index.html',
   '/index.tsx',
   '/manifest.json',
-  '/logo.svg?v=5'
+  '/starfish-icon.svg'
 ];
 
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Força a ativação imediata do novo SW
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -23,12 +23,12 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName); // Limpa cache antigo
+            return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      return self.clients.claim(); // Assume controle da página imediatamente
+      return self.clients.claim();
     })
   );
 });

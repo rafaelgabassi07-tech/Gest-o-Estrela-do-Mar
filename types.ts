@@ -46,6 +46,7 @@ export interface AppSettings {
   kioskName: string;
   ownerName?: string;
   contactPhone?: string;
+  logoUrl?: string | null; // Base64 string of the custom logo
   monthlyGoal: number;
   fees: {
     credit: number;

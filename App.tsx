@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import ExpenseForm from './components/ExpenseForm';
 import ExpenseList from './components/ExpenseList';
 import MonthlySummary from './components/MonthlySummary';
@@ -36,31 +37,20 @@ const App: React.FC = () => {
     return month === selectedMonth && year === selectedYear;
   });
 
-  const handleCloseOrder = (orderId: string, paymentMethod: PaymentMethod) => {
-    // 1. Close order in order manager
-    closeOrder(orderId, paymentMethod);
+  const handleCloseOrder = (updatedOrder: Order, paymentMethod: PaymentMethod) => {
+    // 1. Close order in order manager with the FINAL updated object (including correct totals)
+    closeOrder(updatedOrder, paymentMethod);
     
-    // 2. Find the order details to add to expenses
-    // FIX: We need to get the UPDATED order or calculate the total correctly including fees/discounts
-    const order = orders.find(o => o.id === orderId);
-    
-    if (order) {
-       // We use the total strictly stored in the order, which should be updated just before closing
-       // If the UI updates the total dynamically, we must ensure 'order.total' passed here is correct.
-       // The 'closeOrder' hook updates status, but doesn't recalculate total.
-       // Ideally, the OrderForm calculates the final total and saves it to the order object BEFORE calling close.
-       // Assuming OrderForm did its job, order.total is accurate.
-       
-       addExpense({
-         id: generateId(),
-         category: ExpenseCategory.CASH_IN,
-         description: `Comanda: ${order.tableOrName}`,
-         amount: order.total, // CRITICAL FIX: Use order.total (includes service fee & discount) instead of reducing items
-         date: getLocalDateString(),
-         type: 'income',
-         paymentMethod: paymentMethod
-       });
-    }
+    // 2. Add income expense
+    addExpense({
+      id: generateId(),
+      category: ExpenseCategory.CASH_IN,
+      description: `Comanda: ${updatedOrder.tableOrName}`,
+      amount: updatedOrder.total, // Now uses the correct total from the passed object
+      date: getLocalDateString(),
+      type: 'income',
+      paymentMethod: paymentMethod
+    });
   };
 
   // Render Helpers
@@ -73,7 +63,7 @@ const App: React.FC = () => {
   ];
 
   if (isLocked) {
-    return <LockScreen kioskName={settings.kioskName} onUnlock={unlock} />;
+    return <LockScreen kioskName={settings.kioskName} onUnlock={unlock} customLogo={settings.logoUrl} />;
   }
 
   return (
@@ -85,6 +75,7 @@ const App: React.FC = () => {
         setThemeMode={setThemeMode} 
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenNewExpense={() => setIsModalOpen(true)}
+        customLogo={settings.logoUrl}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-40 pb-28">
@@ -95,58 +86,61 @@ const App: React.FC = () => {
            <button onClick={() => setCurrentView('orders')} className={`px-6 py-2 rounded-xl font-bold transition-all border ${currentView === 'orders' ? 'bg-teal-500 border-teal-600 text-white shadow-lg shadow-teal-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-teal-50 dark:hover:bg-slate-700'}`}>Comandas</button>
         </div>
 
-        <AnimatePresence mode="wait">
-          {currentView === 'dashboard' ? (
-            <motion.div key="dashboard" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
-              {/* Date Filter Bar */}
-              <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                className="flex justify-center md:justify-start mb-8"
-              >
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-300 dark:border-slate-700 p-1.5 flex gap-2 items-center">
-                  <span className="hidden sm:block text-xs font-bold text-gray-500 dark:text-gray-500 uppercase tracking-widest px-3">Período</span>
-                  <div className="h-6 w-px bg-gray-300 dark:bg-slate-700 hidden sm:block"></div>
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="bg-transparent text-gray-900 dark:text-white text-sm font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 py-2 px-3 rounded-xl transition-colors border-none focus:ring-0 outline-none appearance-none"
-                  >
-                    {months.map((m) => <option key={m.value} value={m.value} className="bg-white dark:bg-slate-800">{m.label}</option>)}
-                  </select>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="bg-transparent text-gray-900 dark:text-white text-sm font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 py-2 px-3 rounded-xl transition-colors border-none focus:ring-0 outline-none appearance-none"
-                  >
-                    {years.map((y) => <option key={y} value={y} className="bg-white dark:bg-slate-800">{y}</option>)}
-                  </select>
-                </div>
-              </motion.div>
+        <LayoutGroup>
+          <AnimatePresence mode="wait">
+            {currentView === 'dashboard' ? (
+              <motion.div key="dashboard" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
+                {/* Date Filter Bar */}
+                <motion.div 
+                  layout
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className="flex justify-center md:justify-start mb-8"
+                >
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-300 dark:border-slate-700 p-1.5 flex gap-2 items-center">
+                    <span className="hidden sm:block text-xs font-bold text-gray-500 dark:text-gray-500 uppercase tracking-widest px-3">Período</span>
+                    <div className="h-6 w-px bg-gray-300 dark:bg-slate-700 hidden sm:block"></div>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                      className="bg-transparent text-gray-900 dark:text-white text-sm font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 py-2 px-3 rounded-xl transition-colors border-none focus:ring-0 outline-none appearance-none"
+                    >
+                      {months.map((m) => <option key={m.value} value={m.value} className="bg-white dark:bg-slate-800">{m.label}</option>)}
+                    </select>
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(Number(e.target.value))}
+                      className="bg-transparent text-gray-900 dark:text-white text-sm font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 py-2 px-3 rounded-xl transition-colors border-none focus:ring-0 outline-none appearance-none"
+                    >
+                      {years.map((y) => <option key={y} value={y} className="bg-white dark:bg-slate-800">{y}</option>)}
+                    </select>
+                  </div>
+                </motion.div>
 
-              <MonthlySummary 
-                expenses={filteredExpenses} 
-                selectedMonth={selectedMonth} 
-                selectedYear={selectedYear} 
-                monthlyGoal={settings.monthlyGoal}
-                feesConfig={settings.fees}
-              />
-              
-              <ExpenseList expenses={filteredExpenses} onDeleteExpense={deleteExpense} />
-            </motion.div>
-          ) : (
-            <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-               <OrdersPage 
-                 orders={orders}
-                 onAddOrder={addOrder}
-                 onUpdateOrder={updateOrder}
-                 onCloseOrder={handleCloseOrder}
-                 onDeleteOrder={deleteOrder}
-               />
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <MonthlySummary 
+                  expenses={filteredExpenses} 
+                  selectedMonth={selectedMonth} 
+                  selectedYear={selectedYear} 
+                  monthlyGoal={settings.monthlyGoal}
+                  feesConfig={settings.fees}
+                />
+                
+                <ExpenseList expenses={filteredExpenses} onDeleteExpense={deleteExpense} />
+              </motion.div>
+            ) : (
+              <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+                 <OrdersPage 
+                   orders={orders}
+                   onAddOrder={addOrder}
+                   onUpdateOrder={updateOrder}
+                   onCloseOrder={handleCloseOrder}
+                   onDeleteOrder={deleteOrder}
+                 />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </LayoutGroup>
       </main>
 
       {/* Bottom Navigation Bar (Mobile) */}
