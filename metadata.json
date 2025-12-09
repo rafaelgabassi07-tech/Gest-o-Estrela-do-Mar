@@ -1,0 +1,5 @@
+{
+  "name": "Kiosk Expense Tracker",
+  "description": "An application for beach kiosk owners to track expenses, income, and generate monthly financial balances and AI-powered analysis.",
+  "requestFramePermissions": []
+}
