@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
@@ -30,10 +29,8 @@ const LockScreen: React.FC<LockScreenProps> = ({ kioskName, onUnlock }) => {
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
         className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center border border-slate-700"
       >
-        <div className="w-20 h-20 bg-gradient-to-br from-rose-500 to-orange-500 rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-6">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L14.5 9H22L16 13.5L18.5 21L12 16.5L5.5 21L8 13.5L2 9H9.5L12 2Z" fill="white" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
-          </svg>
+        <div className="w-32 h-32 rounded-full overflow-hidden shadow-2xl mx-auto mb-6 border-4 border-slate-100 dark:border-slate-700">
+          <img src="/logo.svg" alt="Logo" className="w-full h-full object-cover" />
         </div>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{kioskName}</h2>
         <p className="text-sm text-gray-500 mb-6">Insira o PIN para acessar</p>

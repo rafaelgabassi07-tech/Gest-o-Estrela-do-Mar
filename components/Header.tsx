@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ThemeMode } from '../types';
@@ -28,11 +27,9 @@ const Header: React.FC<HeaderProps> = ({ kioskName, themeMode, setThemeMode, onO
           <motion.div 
             whileHover={{ rotate: 15, scale: 1.05 }} 
             whileTap={{ scale: 0.95 }}
-            className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-rose-500 to-orange-500 rounded-2xl shadow-glow-rose flex items-center justify-center cursor-pointer"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg flex items-center justify-center cursor-pointer overflow-hidden border-2 border-white dark:border-slate-700"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white w-6 h-6 sm:w-7 sm:h-7">
-              <path d="M12 2L14.5 9H22L16 13.5L18.5 21L12 16.5L5.5 21L8 13.5L2 9H9.5L12 2Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-            </svg>
+             <img src="/logo.svg" alt="Logo Estrela do Mar" className="w-full h-full object-cover" />
           </motion.div>
           <div className="flex flex-col">
             <h1 className="text-lg sm:text-2xl font-black leading-none tracking-tight text-gray-900 dark:text-white truncate max-w-[150px] sm:max-w-xs transition-colors">{kioskName}</h1>
