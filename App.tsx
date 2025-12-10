@@ -52,6 +52,34 @@ const App: React.FC = () => {
       type: 'income',
       paymentMethod: paymentMethod
     });
+
+    // 3. Update Stock (Baixa de Estoque)
+    const currentProducts = [...settings.products];
+    let stockUpdated = false;
+
+    updatedOrder.items.forEach(item => {
+        // Encontra o produto pelo nome (idealmente seria por ID, mas o OrderItem atual usa ID gerado para a comanda)
+        // Se possível, futuramente adicionar productId ao OrderItem para maior precisão.
+        // Por enquanto, match por nome funciona se os nomes forem únicos.
+        const productIndex = currentProducts.findIndex(p => p.name === item.name);
+        
+        if (productIndex >= 0) {
+            const currentStock = currentProducts[productIndex].stock || 0;
+            // Subtrai apenas se não for cortesia (ou subtrai mesmo assim? Geralmente cortesia também sai do estoque)
+            // Lógica: Sai do estoque independente se foi cobrado ou não.
+            const newStock = Math.max(0, currentStock - item.quantity);
+            
+            currentProducts[productIndex] = {
+                ...currentProducts[productIndex],
+                stock: newStock
+            };
+            stockUpdated = true;
+        }
+    });
+
+    if (stockUpdated) {
+        setSettings({ ...settings, products: currentProducts });
+    }
   };
 
   // Render Helpers
