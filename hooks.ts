@@ -56,7 +56,17 @@ export const useSettingsManager = () => {
     localStorage.setItem('kioskSettings', JSON.stringify(settings));
   }, [settings]);
 
-  return { settings, setSettings };
+  // Nova função para atualizar apenas o estoque de um produto específico
+  const updateProductStock = (productId: string, newQuantity: number) => {
+    setSettings((prev) => ({
+      ...prev,
+      products: prev.products.map((p) => 
+        p.id === productId ? { ...p, stock: newQuantity } : p
+      )
+    }));
+  };
+
+  return { settings, setSettings, updateProductStock };
 };
 
 // Hook para Tema

@@ -9,6 +9,7 @@ import SettingsPanel from './components/SettingsPanel';
 import Header from './components/Header';
 import LockScreen from './components/LockScreen';
 import OrdersPage from './components/OrdersPage';
+import StockPage from './components/StockPage';
 import { CURRENT_YEAR, START_YEAR } from './constants';
 import { useExpenseManager, useSettingsManager, useTheme, useLockScreen, useOrderManager } from './hooks';
 import { generateId, getLocalDateString } from './utils';
@@ -17,13 +18,13 @@ import { ExpenseCategory, Order, PaymentMethod } from './types';
 const App: React.FC = () => {
   // Logic extracted to Hooks
   const { expenses, addExpense, deleteExpense, clearExpenses, setAllExpenses } = useExpenseManager();
-  const { settings, setSettings } = useSettingsManager();
+  const { settings, setSettings, updateProductStock } = useSettingsManager();
   const { themeMode, setThemeMode } = useTheme();
   const { isLocked, unlock } = useLockScreen(settings.securityPin);
   const { orders, addOrder, updateOrder, closeOrder, deleteOrder, setAllOrders } = useOrderManager();
 
   // UI State
-  const [currentView, setCurrentView] = useState<'dashboard' | 'orders'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'orders' | 'stock'>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
@@ -84,6 +85,7 @@ const App: React.FC = () => {
         <div className="hidden md:flex justify-center mb-8 gap-4">
            <button onClick={() => setCurrentView('dashboard')} className={`px-6 py-2 rounded-xl font-bold transition-all border ${currentView === 'dashboard' ? 'bg-rose-500 border-rose-600 text-white shadow-lg shadow-rose-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-slate-700'}`}>Financeiro</button>
            <button onClick={() => setCurrentView('orders')} className={`px-6 py-2 rounded-xl font-bold transition-all border ${currentView === 'orders' ? 'bg-teal-500 border-teal-600 text-white shadow-lg shadow-teal-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-teal-50 dark:hover:bg-slate-700'}`}>Comandas</button>
+           <button onClick={() => setCurrentView('stock')} className={`px-6 py-2 rounded-xl font-bold transition-all border ${currentView === 'stock' ? 'bg-orange-500 border-orange-600 text-white shadow-lg shadow-orange-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-orange-50 dark:hover:bg-slate-700'}`}>Estoque</button>
         </div>
 
         <LayoutGroup>
@@ -128,7 +130,7 @@ const App: React.FC = () => {
                 
                 <ExpenseList expenses={filteredExpenses} onDeleteExpense={deleteExpense} />
               </motion.div>
-            ) : (
+            ) : currentView === 'orders' ? (
               <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
                  <OrdersPage 
                    orders={orders}
@@ -136,6 +138,14 @@ const App: React.FC = () => {
                    onUpdateOrder={updateOrder}
                    onCloseOrder={handleCloseOrder}
                    onDeleteOrder={deleteOrder}
+                 />
+              </motion.div>
+            ) : (
+              <motion.div key="stock" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+                 <StockPage 
+                   products={settings.products || []}
+                   onUpdateStock={updateProductStock}
+                   onOpenSettings={() => setIsSettingsOpen(true)}
                  />
               </motion.div>
             )}
@@ -150,22 +160,27 @@ const App: React.FC = () => {
             <span className="text-[10px] font-bold">Financeiro</span>
          </button>
          
-         {/* Center FAB for New Expense (Only visible in Dashboard) */}
-         {currentView === 'dashboard' && (
-           <motion.button
-            initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }}
-            onClick={() => setIsModalOpen(true)}
-            className="w-14 h-14 -mt-8 bg-gradient-to-br from-rose-500 to-orange-500 text-white rounded-full shadow-xl shadow-rose-500/40 flex items-center justify-center border-4 border-white dark:border-slate-900"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-          </motion.button>
-         )}
-
          <button onClick={() => setCurrentView('orders')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${currentView === 'orders' ? 'text-teal-600 bg-teal-50 dark:bg-teal-900/20' : 'text-gray-500 dark:text-gray-500'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill={currentView === 'orders' ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={currentView === 'orders' ? 0 : 2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
             <span className="text-[10px] font-bold">Comandas</span>
          </button>
+
+         <button onClick={() => setCurrentView('stock')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${currentView === 'stock' ? 'text-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'text-gray-500 dark:text-gray-500'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill={currentView === 'stock' ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={currentView === 'stock' ? 0 : 2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+            <span className="text-[10px] font-bold">Estoque</span>
+         </button>
       </div>
+
+      {/* Center FAB (Adjusted position for 3 tabs) */}
+      {currentView === 'dashboard' && (
+           <motion.button
+            initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }}
+            onClick={() => setIsModalOpen(true)}
+            className="md:hidden fixed bottom-24 right-4 z-40 w-14 h-14 bg-gradient-to-br from-rose-500 to-orange-500 text-white rounded-full shadow-xl shadow-rose-500/40 flex items-center justify-center border-2 border-white dark:border-slate-900"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          </motion.button>
+      )}
 
       {/* Modals */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Novo Lançamento">

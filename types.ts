@@ -40,6 +40,10 @@ export interface Product {
   name: string;
   price: number;
   category: 'food' | 'drink' | 'other';
+  stock?: number; // Quantidade atual
+  minStock?: number; // Alerta de estoque mínimo
+  unit?: 'un' | 'kg' | 'L'; // Unidade de medida
+  barcode?: string; // Código de barras (EAN-13, QR, etc)
 }
 
 export interface AppSettings {

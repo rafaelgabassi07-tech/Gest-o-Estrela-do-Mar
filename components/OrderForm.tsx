@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Order, OrderItem, PaymentMethod } from '../types';
+import { Order, OrderItem, PaymentMethod, Product } from '../types';
 import { generateId, formatCurrency } from '../utils';
 import { PAYMENT_METHOD_OPTIONS } from '../constants';
 import { useSettingsManager } from '../hooks';
+import BarcodeScanner from './BarcodeScanner';
 
 interface OrderFormProps {
   existingOrder?: Order | null;
@@ -16,12 +17,14 @@ interface OrderFormProps {
 type MobileTab = 'menu' | 'ticket';
 
 const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onCloseOrder, onCancel }) => {
-  const { settings } = useSettingsManager();
+  const { settings, setSettings } = useSettingsManager();
   const customItemInputRef = useRef<HTMLInputElement>(null);
   
   // Mobile Tab State
   const [activeMobileTab, setActiveMobileTab] = useState<MobileTab>('menu');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  const [linkProductModal, setLinkProductModal] = useState<{code: string} | null>(null);
 
   const [tableOrName, setTableOrName] = useState('');
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -72,7 +75,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
     }, 50);
   };
 
-  const addCatalogItem = (product: any) => {
+  const addCatalogItem = (product: Product) => {
      // Check if item exists to increment
      const existingItemIndex = items.findIndex(i => i.name === product.name && !i.isCourtesy && i.status === 'pending');
      
@@ -91,6 +94,36 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
         };
         setItems([...items, newItem]);
      }
+  };
+
+  const handleScan = (code: string) => {
+      // 1. Try to find product with this code
+      const foundProduct = settings.products.find(p => p.barcode === code);
+      
+      if (foundProduct) {
+          addCatalogItem(foundProduct);
+          // Optional: Beep or Toast here
+      } else {
+          // 2. Not found, ask to link
+          setShowScanner(false);
+          setLinkProductModal({ code });
+      }
+  };
+
+  const linkProductToBarcode = (product: Product) => {
+      if (!linkProductModal) return;
+      
+      // Update Settings with new barcode
+      const updatedProducts = settings.products.map(p => 
+          p.id === product.id ? { ...p, barcode: linkProductModal.code } : p
+      );
+      setSettings({ ...settings, products: updatedProducts });
+      
+      // Add item to order
+      addCatalogItem(product);
+      
+      // Close modal
+      setLinkProductModal(null);
   };
 
   const getProductQuantity = (productName: string) => {
@@ -226,7 +259,27 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
 
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-transparent relative">
-      
+      {/* Link Product Modal */}
+      {linkProductModal && (
+          <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Novo Código Detectado!</h3>
+                  <p className="text-sm text-gray-500 mb-4">O código <strong>{linkProductModal.code}</strong> não está cadastrado. Selecione um produto abaixo para vincular:</p>
+                  <div className="max-h-60 overflow-y-auto mb-4 border rounded-xl divide-y dark:divide-slate-700 border-gray-200 dark:border-slate-700">
+                      {allProducts.map(p => (
+                          <button key={p.id} onClick={() => linkProductToBarcode(p)} className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-slate-700 flex justify-between items-center">
+                              <span className="font-bold text-gray-800 dark:text-gray-200">{p.name}</span>
+                              <span className="text-xs text-gray-500">{formatCurrency(p.price)}</span>
+                          </button>
+                      ))}
+                  </div>
+                  <button onClick={() => setLinkProductModal(null)} className="w-full py-3 text-red-500 font-bold border border-red-200 rounded-xl hover:bg-red-50">Cancelar</button>
+              </div>
+          </div>
+      )}
+
+      {showScanner && <BarcodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
+
       {/* MOBILE TAB NAVIGATION (Fixed Top) */}
       <div className="md:hidden flex p-2 gap-2 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shrink-0 z-20">
           <button 
@@ -259,14 +312,16 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
                     {existingOrder && <button onClick={() => setTableOrName(prompt('Editar nome:', tableOrName) || tableOrName)} className="text-gray-400 hover:text-rose-500 bg-gray-100 dark:bg-slate-700 p-2 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg></button>}
                 </div>
                 
-                {/* Manual Add */}
-                <div className="flex gap-2">
-                    <input ref={customItemInputRef} id="newItemName" type="text" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Item manual..." className="flex-[2] bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 text-gray-900 dark:text-white" />
-                    <div className="flex-1 relative">
-                        <span className="absolute left-2 top-2 text-xs text-gray-400 font-bold">R$</span>
-                        <input type="number" min="0" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value ? Math.abs(parseFloat(e.target.value)) : '')} className="w-full bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg pl-6 pr-2 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 text-gray-900 dark:text-white" />
+                {/* Manual Add - Vertical Stack on Mobile, Row on Desktop */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <input ref={customItemInputRef} id="newItemName" type="text" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Item manual..." className="w-full sm:flex-[2] bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 text-gray-900 dark:text-white" />
+                    <div className="flex gap-2 w-full sm:flex-1">
+                        <div className="flex-1 relative">
+                            <span className="absolute left-2 top-2 text-xs text-gray-400 font-bold">R$</span>
+                            <input type="number" min="0" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value ? Math.abs(parseFloat(e.target.value)) : '')} className="w-full bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg pl-6 pr-2 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 text-gray-900 dark:text-white" />
+                        </div>
+                        <button onClick={addCustomItem} className="bg-gray-800 dark:bg-white text-white dark:text-gray-900 rounded-lg w-12 flex items-center justify-center font-bold shadow-sm hover:scale-105 transition-transform border border-transparent">+</button>
                     </div>
-                    <button onClick={addCustomItem} className="bg-gray-800 dark:bg-white text-white dark:text-gray-900 rounded-lg w-10 flex items-center justify-center font-bold shadow-sm hover:scale-105 transition-transform border border-transparent">+</button>
                 </div>
             </div>
 
@@ -368,21 +423,29 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                     <span className="text-xs font-bold uppercase tracking-widest">Toque Rápido</span>
                 </div>
-                <div className="relative">
-                   <input 
-                      type="text" 
-                      placeholder="Buscar item..." 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg text-xs py-1.5 px-3 pl-8 focus:ring-1 focus:ring-rose-500 outline-none"
-                   />
-                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 absolute left-2.5 top-2 text-gray-400"><path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" /></svg>
+                <div className="flex gap-2">
+                    <button onClick={() => setShowScanner(true)} className="bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 p-2 rounded-lg text-gray-700 dark:text-white transition-colors" title="Escanear Código">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75zM16.5 19.5h.75v.75h-.75v-.75z" /></svg>
+                    </button>
+                    <div className="relative">
+                       <input 
+                          type="text" 
+                          placeholder="Buscar item..." 
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg text-xs py-1.5 px-3 pl-8 focus:ring-1 focus:ring-rose-500 outline-none"
+                       />
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 absolute left-2.5 top-2 text-gray-400"><path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" /></svg>
+                    </div>
                 </div>
             </div>
 
             {/* Mobile Header for Catalog (Search) */}
-            <div className="md:hidden p-3 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0">
-                 <div className="relative">
+            <div className="md:hidden p-3 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0 flex gap-2">
+                 <button onClick={() => setShowScanner(true)} className="bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 px-3 rounded-xl text-gray-700 dark:text-white transition-colors flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75zM16.5 19.5h.75v.75h-.75v-.75z" /></svg>
+                 </button>
+                 <div className="relative flex-1">
                    <input 
                       type="text" 
                       placeholder="Buscar produto..." 

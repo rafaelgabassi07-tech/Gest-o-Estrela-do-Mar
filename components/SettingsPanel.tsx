@@ -3,6 +3,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppSettings, Expense, Product, Order, ExpenseCategory, PaymentMethod } from '../types';
 import { generateId, formatCurrency } from '../utils';
+import BarcodeScanner from './BarcodeScanner';
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -168,27 +169,57 @@ const ProductManager: React.FC<{ settings: AppSettings, onUpdate: (s: AppSetting
     const [editingProdId, setEditingProdId] = useState<string | null>(null);
     const [prodName, setProdName] = useState('');
     const [prodPrice, setProdPrice] = useState('');
+    const [prodStock, setProdStock] = useState('');
+    const [prodMinStock, setProdMinStock] = useState('');
+    const [prodBarcode, setProdBarcode] = useState('');
     const [prodCat, setProdCat] = useState<'food' | 'drink' | 'other'>('drink');
     const [search, setSearch] = useState('');
+    const [showScanner, setShowScanner] = useState(false);
 
-    const resetForm = () => { setEditingProdId(null); setProdName(''); setProdPrice(''); setProdCat('drink'); };
+    const resetForm = () => { 
+        setEditingProdId(null); 
+        setProdName(''); 
+        setProdPrice(''); 
+        setProdStock('');
+        setProdMinStock('');
+        setProdBarcode('');
+        setProdCat('drink'); 
+    };
 
     const handleSave = () => {
         if (!prodName || !prodPrice) return onStatus('error', 'Preencha nome e preço');
         if (Number(prodPrice) < 0) return onStatus('error', 'O preço não pode ser negativo');
+        
+        const newProductData = {
+            name: prodName,
+            price: Number(prodPrice),
+            category: prodCat,
+            stock: prodStock ? Number(prodStock) : 0,
+            minStock: prodMinStock ? Number(prodMinStock) : 5,
+            barcode: prodBarcode || undefined
+        };
+
         let newProducts = [...(settings.products || [])];
         if (editingProdId) {
-            newProducts = newProducts.map(p => p.id === editingProdId ? { ...p, name: prodName, price: Number(prodPrice), category: prodCat } : p);
+            newProducts = newProducts.map(p => p.id === editingProdId ? { ...p, ...newProductData } : p);
             onStatus('success', 'Produto atualizado!');
         } else {
-            newProducts.push({ id: generateId(), name: prodName, price: Number(prodPrice), category: prodCat });
+            newProducts.push({ id: generateId(), ...newProductData });
             onStatus('success', 'Produto adicionado!');
         }
         onUpdate({ ...settings, products: newProducts });
         resetForm();
     };
 
-    const handleEditClick = (prod: Product) => { setEditingProdId(prod.id); setProdName(prod.name); setProdPrice(String(prod.price)); setProdCat(prod.category); };
+    const handleEditClick = (prod: Product) => { 
+        setEditingProdId(prod.id); 
+        setProdName(prod.name); 
+        setProdPrice(String(prod.price)); 
+        setProdStock(String(prod.stock || 0));
+        setProdMinStock(String(prod.minStock || 5));
+        setProdBarcode(prod.barcode || '');
+        setProdCat(prod.category); 
+    };
     const handleDelete = (id: string) => { onUpdate({ ...settings, products: settings.products.filter(p => p.id !== id) }); if (editingProdId === id) resetForm(); };
 
     const filteredProducts = useMemo(() => {
@@ -197,35 +228,68 @@ const ProductManager: React.FC<{ settings: AppSettings, onUpdate: (s: AppSetting
 
     return (
         <div className="flex flex-col h-full gap-6 animate-fade-in relative max-w-2xl mx-auto">
-            <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm z-10">
+            {showScanner && <BarcodeScanner onScan={(code) => { setProdBarcode(code); setShowScanner(false); onStatus('success', 'Código lido!'); }} onClose={() => setShowScanner(false)} />}
+            
+            {/* Form de Produto Repaginado para Mobile */}
+            <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm z-10">
                 <div className="flex justify-between items-center mb-4">
                     <h4 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-wide flex items-center gap-2">
-                         <span className={`w-2 h-2 rounded-full ${editingProdId ? 'bg-blue-500' : 'bg-rose-500'}`}></span>
+                         <span className={`w-2.5 h-2.5 rounded-full ${editingProdId ? 'bg-blue-500' : 'bg-rose-500'}`}></span>
                          {editingProdId ? 'Editar Produto' : 'Novo Produto'}
                     </h4>
-                    {editingProdId && <button onClick={resetForm} className="text-xs text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-rose-900/20 px-2 py-1 rounded transition-colors">Cancelar Edição</button>}
+                    {editingProdId && <button onClick={resetForm} className="text-[10px] font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-2 py-1.5 rounded transition-colors uppercase">Cancelar</button>}
                 </div>
-                <div className="grid grid-cols-1 gap-4">
-                    <div className="flex gap-3">
-                        <input type="text" value={prodName} onChange={(e) => setProdName(e.target.value)} placeholder="Nome do Produto" className="flex-[2] rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm py-2.5 px-4 outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all placeholder-gray-400" />
-                        <input type="number" min="0" value={prodPrice} onChange={(e) => setProdPrice(e.target.value)} placeholder="0.00" className="flex-1 rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm py-2.5 px-4 outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all placeholder-gray-400" />
+                
+                {/* Layout Stacked para Mobile */}
+                <div className="flex flex-col gap-4">
+                    {/* Nome (Full Width) */}
+                    <div className="w-full">
+                        <input type="text" value={prodName} onChange={(e) => setProdName(e.target.value)} placeholder="Nome do Produto (ex: Cerveja)" className="w-full rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-base py-3 px-4 outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all placeholder-gray-400" />
                     </div>
+
+                    {/* Preço e Categoria (Row) */}
                     <div className="flex gap-3">
                         <div className="relative flex-1">
-                            <select value={prodCat} onChange={(e) => setProdCat(e.target.value as any)} className="w-full rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm py-2.5 px-4 outline-none appearance-none cursor-pointer focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all">
+                            <span className="absolute left-3 top-3.5 text-gray-400 text-xs font-bold">R$</span>
+                            <input type="number" min="0" step="0.50" value={prodPrice} onChange={(e) => setProdPrice(e.target.value)} placeholder="Preço" className="w-full rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-base py-3 px-4 pl-9 outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all placeholder-gray-400" />
+                        </div>
+                        <div className="relative flex-1">
+                             <select value={prodCat} onChange={(e) => setProdCat(e.target.value as any)} className="w-full rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-base py-3 px-4 outline-none appearance-none cursor-pointer focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all">
                                 <option value="drink">🍺 Bebida</option><option value="food">🍔 Comida</option><option value="other">📦 Outro</option>
                             </select>
-                            <div className="absolute right-3 top-3 pointer-events-none text-gray-500 dark:text-gray-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
-                            </div>
                         </div>
-                        <button onClick={handleSave} className={`rounded-xl px-6 flex items-center justify-center text-white shadow-md transition-all active:scale-95 ${editingProdId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-rose-500 hover:bg-rose-600'}`}>
-                            {editingProdId ? 'Salvar' : 'Adicionar'}
+                    </div>
+
+                    {/* Código de Barras (New) */}
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                             <input type="text" value={prodBarcode} onChange={(e) => setProdBarcode(e.target.value)} placeholder="Código de Barras (Opcional)" className="w-full rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm py-3 px-4 outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all" />
+                        </div>
+                        <button onClick={() => setShowScanner(true)} className="bg-gray-800 dark:bg-white text-white dark:text-gray-900 p-3 rounded-xl shadow-sm hover:scale-105 transition-transform" title="Escanear Código">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75zM16.5 19.5h.75v.75h-.75v-.75z" /></svg>
                         </button>
                     </div>
+
+                    {/* Estoque Inicial e Minimo (Row) - Only if needed, can be collapsible */}
+                    <div className="flex gap-3 bg-gray-50 dark:bg-slate-700/50 p-3 rounded-xl border border-dashed border-gray-200 dark:border-slate-600">
+                         <div className="flex-1">
+                             <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Estoque Atual</label>
+                             <input type="number" value={prodStock} onChange={(e) => setProdStock(e.target.value)} placeholder="0" className="w-full rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 p-2 text-sm font-bold text-center" />
+                         </div>
+                         <div className="flex-1">
+                             <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Estoque Mínimo</label>
+                             <input type="number" value={prodMinStock} onChange={(e) => setProdMinStock(e.target.value)} placeholder="5" className="w-full rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 p-2 text-sm font-bold text-center" />
+                         </div>
+                    </div>
+                    
+                    {/* Botão (Full Width) */}
+                    <button onClick={handleSave} className={`w-full rounded-xl py-3.5 flex items-center justify-center text-white font-bold shadow-md transition-all active:scale-95 ${editingProdId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-rose-500 hover:bg-rose-600'}`}>
+                        {editingProdId ? 'Salvar Alterações' : 'Adicionar ao Cardápio'}
+                    </button>
                 </div>
             </div>
 
+            {/* Lista com Busca */}
             <div className="flex-1 flex flex-col min-h-0">
                 <div className="relative mb-3">
                     <input type="text" placeholder="Buscar no cardápio..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 py-3 bg-white dark:bg-slate-800 rounded-xl text-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-white focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none transition-all shadow-sm" />
@@ -240,7 +304,13 @@ const ProductManager: React.FC<{ settings: AppSettings, onUpdate: (s: AppSetting
                                     <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-sm border border-white/50 dark:border-white/5 ${prod.category === 'drink' ? 'bg-blue-100 text-blue-600' : prod.category === 'food' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>{prod.category === 'drink' ? '🍺' : prod.category === 'food' ? '🍔' : '📦'}</span>
                                     <div><p className="font-bold text-gray-800 dark:text-white text-sm">{prod.name}</p><p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{formatCurrency(prod.price)}</p></div>
                                 </div>
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(prod.id); }} className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-500 opacity-0 group-hover:opacity-100 transition-all"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.14-2.007-2.203L13.78 3.69a1.25 1.25 0 00-1.294 0l-1.007.31c-1.096.34-2.006 1.3-2.006 2.484V6.25m3.75-1.5H10.5" /></svg></button>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-right hidden sm:block">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Estoque</p>
+                                        <p className={`text-xs font-black ${ (prod.stock || 0) <= (prod.minStock || 5) ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'}`}>{prod.stock || 0}</p>
+                                    </div>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(prod.id); }} className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-500 opacity-0 group-hover:opacity-100 transition-all"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.14-2.007-2.203L13.78 3.69a1.25 1.25 0 00-1.294 0l-1.007.31c-1.096.34-2.006 1.3-2.006 2.484V6.25m3.75-1.5H10.5" /></svg></button>
+                                </div>
                             </motion.div>
                         ))}
                     </AnimatePresence>
@@ -470,7 +540,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
 
           <div className="p-6 text-center border-t border-gray-200 dark:border-slate-800">
                 <p className="text-xs font-bold text-gray-900 dark:text-white">Quiosque Estrela do Mar</p>
-                <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5">Versão 2.2.0 • PWA</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5">Versão 2.3.0 • PWA</p>
           </div>
       </div>
 
