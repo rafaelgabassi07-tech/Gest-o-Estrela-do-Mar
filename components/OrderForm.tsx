@@ -42,6 +42,13 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
   const [isClosing, setIsClosing] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(PaymentMethod.MONEY);
 
+  // Helper for haptics
+  const vibrate = (ms: number = 10) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(ms);
+    }
+  };
+
   useEffect(() => {
     if (existingOrder) {
       setTableOrName(existingOrder.tableOrName);
@@ -68,6 +75,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
     setItems([...items, newItem]);
     setNewItemName('');
     setNewItemPrice('');
+    vibrate(15);
     
     // Focus back on input using Ref
     setTimeout(() => {
@@ -77,7 +85,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
 
   const addCatalogItem = (product: Product) => {
      // Check if item exists to increment
-     const existingItemIndex = items.findIndex(i => i.name === product.name && !i.isCourtesy && i.status === 'pending');
+     const existingItemIndex = items.findIndex(i => (i.productId === product.id || i.name === product.name) && !i.isCourtesy && i.status === 'pending');
      
      if (existingItemIndex >= 0) {
         const updatedItems = [...items];
@@ -86,6 +94,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
      } else {
         const newItem: OrderItem = {
             id: generateId(),
+            productId: product.id, // Vínculo importante para o estoque
             name: product.name,
             price: product.price,
             quantity: 1,
@@ -94,6 +103,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
         };
         setItems([...items, newItem]);
      }
+     vibrate(15);
   };
 
   const handleScan = (code: string) => {
@@ -134,6 +144,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
 
   const incrementQuantity = (id: string) => {
     setItems(items.map(i => i.id === id ? { ...i, quantity: i.quantity + 1 } : i));
+    vibrate(5);
   };
 
   const decrementQuantity = (id: string) => {
@@ -143,10 +154,12 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
       }
       return i;
     }));
+    vibrate(5);
   };
 
   const removeItem = (id: string) => {
     setItems(items.filter(i => i.id !== id));
+    vibrate(10);
   };
 
   const toggleStatus = (id: string) => {
@@ -166,6 +179,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
 
   const handleSave = () => {
     if (!tableOrName) return alert('Informe a mesa ou nome.');
+    vibrate(20);
     const order: Order = {
       id: existingOrder?.id || generateId(),
       tableOrName,
@@ -231,7 +245,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
                         {PAYMENT_METHOD_OPTIONS.map(opt => (
                             <button 
                                 key={opt.value} 
-                                onClick={() => setSelectedPayment(opt.value as PaymentMethod)}
+                                onClick={() => { setSelectedPayment(opt.value as PaymentMethod); vibrate(5); }}
                                 className={`p-4 rounded-xl font-bold transition-all border ${selectedPayment === opt.value ? 'bg-rose-500 border-rose-600 text-white shadow-lg scale-105' : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50'}`}
                             >
                                 {opt.label}
@@ -283,13 +297,13 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
       {/* MOBILE TAB NAVIGATION (Fixed Top) */}
       <div className="md:hidden flex p-2 gap-2 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shrink-0 z-20">
           <button 
-             onClick={() => setActiveMobileTab('menu')}
+             onClick={() => { setActiveMobileTab('menu'); vibrate(5); }}
              className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${activeMobileTab === 'menu' ? 'bg-rose-500 text-white shadow-md transform scale-105' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400'}`}
           >
              Cardápio
           </button>
           <button 
-             onClick={() => setActiveMobileTab('ticket')}
+             onClick={() => { setActiveMobileTab('ticket'); vibrate(5); }}
              className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wide transition-all relative ${activeMobileTab === 'ticket' ? 'bg-teal-500 text-white shadow-md transform scale-105' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400'}`}
           >
              Comanda {items.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white min-w-[1.25rem] h-5 rounded-full flex items-center justify-center text-[10px] border-2 border-white dark:border-slate-800 shadow-sm">{items.reduce((acc, i) => acc + i.quantity, 0)}</span>}
@@ -318,7 +332,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
                     <div className="flex gap-2 w-full sm:flex-1">
                         <div className="flex-1 relative">
                             <span className="absolute left-2 top-2 text-xs text-gray-400 font-bold">R$</span>
-                            <input type="number" min="0" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value ? Math.abs(parseFloat(e.target.value)) : '')} className="w-full bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg pl-6 pr-2 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 text-gray-900 dark:text-white" />
+                            <input type="number" min="0" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value ? Math.abs(parseFloat(e.target.value)) : '')} className="w-full bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg pl-6 pr-2 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 text-gray-900 dark:text-white appearance-none" />
                         </div>
                         <button onClick={addCustomItem} className="bg-gray-800 dark:bg-white text-white dark:text-gray-900 rounded-lg w-12 flex items-center justify-center font-bold shadow-sm hover:scale-105 transition-transform border border-transparent">+</button>
                     </div>
@@ -326,7 +340,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
             </div>
 
             {/* Scrollable Items List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 bg-slate-50 dark:bg-transparent min-h-0 pb-24 md:pb-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 bg-slate-50 dark:bg-transparent min-h-0 pb-32 md:pb-4">
                 {items.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
                         <p className="text-sm font-medium">Comanda vazia</p>
@@ -398,7 +412,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
                         <span className="text-gray-600 dark:text-gray-400 font-bold text-xs">Desc.</span>
                         <div className="relative">
                             <span className="absolute left-1.5 top-1 text-xs text-gray-400">R$</span>
-                            <input type="number" min="0" value={discount} onChange={(e) => setDiscount(e.target.value ? Math.abs(parseFloat(e.target.value)) : '')} className="w-20 bg-gray-50 dark:bg-slate-700 rounded border border-gray-300 dark:border-slate-600 px-2 pl-5 py-1 text-right text-xs font-bold outline-none focus:border-rose-500" placeholder="0.00" />
+                            <input type="number" min="0" value={discount} onChange={(e) => setDiscount(e.target.value ? Math.abs(parseFloat(e.target.value)) : '')} className="w-20 bg-gray-50 dark:bg-slate-700 rounded border border-gray-300 dark:border-slate-600 px-2 pl-5 py-1 text-right text-xs font-bold outline-none focus:border-rose-500 appearance-none" placeholder="0.00" />
                         </div>
                     </div>
                 </div>
@@ -457,7 +471,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6 bg-white dark:bg-transparent pb-24 md:pb-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6 bg-white dark:bg-transparent pb-32 md:pb-4">
                 {/* Drinks Section */}
                 {drinks.length > 0 && (
                     <section>
@@ -556,7 +570,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ existingOrder, onSaveOrder, onClo
                   <motion.button 
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    onClick={() => setActiveMobileTab('ticket')}
+                    onClick={() => { setActiveMobileTab('ticket'); vibrate(10); }}
                     className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl shadow-2xl font-black flex justify-between px-6 items-center text-sm ring-1 ring-white/20"
                   >
                      <div className="flex items-center gap-2">

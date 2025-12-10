@@ -24,6 +24,7 @@ const StockPage: React.FC<StockPageProps> = ({ products, onUpdateStock, onOpenSe
   useEffect(() => {
     if (editingId && inputRef.current) {
         inputRef.current.focus();
+        inputRef.current.select(); // Auto-select the text for easy replacement
     }
   }, [editingId]);
 
@@ -53,6 +54,7 @@ const StockPage: React.FC<StockPageProps> = ({ products, onUpdateStock, onOpenSe
   const handleStockChange = (id: string, current: number, delta: number) => {
     const newValue = Math.max(0, current + delta);
     onUpdateStock(id, newValue);
+    if(navigator.vibrate) navigator.vibrate(5);
   };
 
   const startEditing = (product: Product) => {
@@ -87,7 +89,7 @@ const StockPage: React.FC<StockPageProps> = ({ products, onUpdateStock, onOpenSe
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-20 md:pb-0">
+    <div className="space-y-6 animate-fade-in pb-32 md:pb-0">
       {showScanner && <BarcodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
       
       {/* Dashboard de Estoque */}
@@ -191,7 +193,7 @@ const StockPage: React.FC<StockPageProps> = ({ products, onUpdateStock, onOpenSe
                                           onChange={(e) => setEditValue(e.target.value)}
                                           onBlur={() => saveEditing(product.id)}
                                           onKeyDown={(e) => handleKeyDown(e, product.id)}
-                                          className="w-16 text-center text-xl font-black bg-white dark:bg-slate-600 rounded border border-blue-500 outline-none p-0 text-gray-900 dark:text-white"
+                                          className="w-16 text-center text-xl font-black bg-white dark:bg-slate-600 rounded border border-blue-500 outline-none p-0 text-gray-900 dark:text-white appearance-none"
                                        />
                                    ) : (
                                        <span 

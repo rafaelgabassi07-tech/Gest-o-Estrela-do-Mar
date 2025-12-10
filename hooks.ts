@@ -93,23 +93,14 @@ export const useTheme = () => {
   return { themeMode, setThemeMode };
 };
 
-// Hook para Bloqueio de Tela
-export const useLockScreen = (securityPin: string | null) => {
-  const [isLocked, setIsLocked] = useState(false);
-
-  useEffect(() => {
-    if (securityPin) setIsLocked(true);
-  }, [securityPin]);
-
-  const unlock = (pin: string) => {
-    if (pin === securityPin) {
-      setIsLocked(false);
-      return true;
-    }
-    return false;
+// Hook para Bloqueio de Tela (Lógica de Validação)
+export const useLockScreen = () => {
+  const validatePin = (inputPin: string, correctPin: string | null) => {
+    if (!correctPin) return true; // Se não tem PIN configurado, libera
+    return inputPin === correctPin;
   };
 
-  return { isLocked, unlock };
+  return { validatePin };
 };
 
 // Hook para Gerenciar Comandas (Orders)

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import ExpenseForm from './components/ExpenseForm';
 import ExpenseList from './components/ExpenseList';
@@ -20,15 +20,33 @@ const App: React.FC = () => {
   const { expenses, addExpense, deleteExpense, clearExpenses, setAllExpenses } = useExpenseManager();
   const { settings, setSettings, updateProductStock } = useSettingsManager();
   const { themeMode, setThemeMode } = useTheme();
-  const { isLocked, unlock } = useLockScreen(settings.securityPin);
+  const { validatePin } = useLockScreen();
   const { orders, addOrder, updateOrder, closeOrder, deleteOrder, setAllOrders } = useOrderManager();
 
   // UI State
-  const [currentView, setCurrentView] = useState<'dashboard' | 'orders' | 'stock'>('dashboard');
+  // App starts at 'orders' (Comandas) by default now
+  const [currentView, setCurrentView] = useState<'dashboard' | 'orders' | 'stock'>('orders');
+  const [financeUnlocked, setFinanceUnlocked] = useState(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  // Security Logic: Lock Finance when leaving the tab
+  useEffect(() => {
+     if (currentView !== 'dashboard') {
+         setFinanceUnlocked(false);
+     }
+  }, [currentView]);
+
+  const handleUnlockFinance = (pin: string) => {
+      const isValid = validatePin(pin, settings.securityPin);
+      if (isValid) {
+          setFinanceUnlocked(true);
+      }
+      return isValid;
+  };
 
   // Filter Expenses by Month/Year
   const filteredExpenses = expenses.filter((expense) => {
@@ -58,14 +76,13 @@ const App: React.FC = () => {
     let stockUpdated = false;
 
     updatedOrder.items.forEach(item => {
-        // Encontra o produto pelo nome (idealmente seria por ID, mas o OrderItem atual usa ID gerado para a comanda)
-        // Se possível, futuramente adicionar productId ao OrderItem para maior precisão.
-        // Por enquanto, match por nome funciona se os nomes forem únicos.
-        const productIndex = currentProducts.findIndex(p => p.name === item.name);
+        // Tenta encontrar pelo ID primeiro (mais seguro), senão pelo nome (fallback)
+        const productIndex = currentProducts.findIndex(p => 
+          (item.productId && p.id === item.productId) || p.name === item.name
+        );
         
         if (productIndex >= 0) {
             const currentStock = currentProducts[productIndex].stock || 0;
-            // Subtrai apenas se não for cortesia (ou subtrai mesmo assim? Geralmente cortesia também sai do estoque)
             // Lógica: Sai do estoque independente se foi cobrado ou não.
             const newStock = Math.max(0, currentStock - item.quantity);
             
@@ -80,6 +97,11 @@ const App: React.FC = () => {
     if (stockUpdated) {
         setSettings({ ...settings, products: currentProducts });
     }
+    
+    // Haptic Feedback for success
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([50, 50, 50]);
+    }
   };
 
   // Render Helpers
@@ -91,9 +113,61 @@ const App: React.FC = () => {
     { value: 9, label: 'Outubro' }, { value: 10, label: 'Novembro' }, { value: 11, label: 'Dezembro' },
   ];
 
-  if (isLocked) {
-    return <LockScreen kioskName={settings.kioskName} onUnlock={unlock} customLogo={settings.logoUrl} />;
-  }
+  const renderDashboardContent = () => {
+      // Check if PIN is configured AND not unlocked yet
+      if (settings.securityPin && !financeUnlocked) {
+          return (
+             <LockScreen 
+                kioskName={settings.kioskName} 
+                onUnlock={handleUnlockFinance} 
+                customLogo={settings.logoUrl} 
+                embedded={true}
+             />
+          );
+      }
+
+      return (
+          <>
+            {/* Date Filter Bar */}
+            <motion.div 
+              layout
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="flex justify-center md:justify-start mb-8"
+            >
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-300 dark:border-slate-700 p-1.5 flex gap-2 items-center">
+                <span className="hidden sm:block text-xs font-bold text-gray-500 dark:text-gray-500 uppercase tracking-widest px-3">Período</span>
+                <div className="h-6 w-px bg-gray-300 dark:bg-slate-700 hidden sm:block"></div>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  className="bg-transparent text-gray-900 dark:text-white text-sm font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 py-2 px-3 rounded-xl transition-colors border-none focus:ring-0 outline-none appearance-none"
+                >
+                  {months.map((m) => <option key={m.value} value={m.value} className="bg-white dark:bg-slate-800">{m.label}</option>)}
+                </select>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="bg-transparent text-gray-900 dark:text-white text-sm font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 py-2 px-3 rounded-xl transition-colors border-none focus:ring-0 outline-none appearance-none"
+                >
+                  {years.map((y) => <option key={y} value={y} className="bg-white dark:bg-slate-800">{y}</option>)}
+                </select>
+              </div>
+            </motion.div>
+
+            <MonthlySummary 
+              expenses={filteredExpenses} 
+              selectedMonth={selectedMonth} 
+              selectedYear={selectedYear} 
+              monthlyGoal={settings.monthlyGoal}
+              feesConfig={settings.fees}
+            />
+            
+            <ExpenseList expenses={filteredExpenses} onDeleteExpense={deleteExpense} />
+          </>
+      );
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-slate-900 transition-colors duration-500 font-sans text-gray-900 dark:text-gray-100 selection:bg-rose-500 selection:text-white overflow-x-hidden pb-24 md:pb-0">
@@ -107,7 +181,7 @@ const App: React.FC = () => {
         customLogo={settings.logoUrl}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-40 pb-28">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-40 pb-32 md:pb-12">
         
         {/* View Switcher Tabs (Desktop Only - Mobile uses Bottom Bar) */}
         <div className="hidden md:flex justify-center mb-8 gap-4">
@@ -120,43 +194,7 @@ const App: React.FC = () => {
           <AnimatePresence mode="wait">
             {currentView === 'dashboard' ? (
               <motion.div key="dashboard" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
-                {/* Date Filter Bar */}
-                <motion.div 
-                  layout
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="flex justify-center md:justify-start mb-8"
-                >
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-300 dark:border-slate-700 p-1.5 flex gap-2 items-center">
-                    <span className="hidden sm:block text-xs font-bold text-gray-500 dark:text-gray-500 uppercase tracking-widest px-3">Período</span>
-                    <div className="h-6 w-px bg-gray-300 dark:bg-slate-700 hidden sm:block"></div>
-                    <select
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                      className="bg-transparent text-gray-900 dark:text-white text-sm font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 py-2 px-3 rounded-xl transition-colors border-none focus:ring-0 outline-none appearance-none"
-                    >
-                      {months.map((m) => <option key={m.value} value={m.value} className="bg-white dark:bg-slate-800">{m.label}</option>)}
-                    </select>
-                    <select
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(Number(e.target.value))}
-                      className="bg-transparent text-gray-900 dark:text-white text-sm font-bold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 py-2 px-3 rounded-xl transition-colors border-none focus:ring-0 outline-none appearance-none"
-                    >
-                      {years.map((y) => <option key={y} value={y} className="bg-white dark:bg-slate-800">{y}</option>)}
-                    </select>
-                  </div>
-                </motion.div>
-
-                <MonthlySummary 
-                  expenses={filteredExpenses} 
-                  selectedMonth={selectedMonth} 
-                  selectedYear={selectedYear} 
-                  monthlyGoal={settings.monthlyGoal}
-                  feesConfig={settings.fees}
-                />
-                
-                <ExpenseList expenses={filteredExpenses} onDeleteExpense={deleteExpense} />
+                {renderDashboardContent()}
               </motion.div>
             ) : currentView === 'orders' ? (
               <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
@@ -183,27 +221,38 @@ const App: React.FC = () => {
 
       {/* Bottom Navigation Bar (Mobile) */}
       <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 p-2 md:hidden z-50 flex justify-around items-center pb-safe shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
-         <button onClick={() => setCurrentView('dashboard')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${currentView === 'dashboard' ? 'text-rose-600 bg-rose-50 dark:bg-rose-900/20' : 'text-gray-500 dark:text-gray-500'}`}>
+         <button onClick={() => { setCurrentView('dashboard'); if(navigator.vibrate) navigator.vibrate(5); }} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${currentView === 'dashboard' ? 'text-rose-600 bg-rose-50 dark:bg-rose-900/20' : 'text-gray-500 dark:text-gray-500'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill={currentView === 'dashboard' ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={currentView === 'dashboard' ? 0 : 2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" /></svg>
             <span className="text-[10px] font-bold">Financeiro</span>
          </button>
          
-         <button onClick={() => setCurrentView('orders')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${currentView === 'orders' ? 'text-teal-600 bg-teal-50 dark:bg-teal-900/20' : 'text-gray-500 dark:text-gray-500'}`}>
+         <button onClick={() => { setCurrentView('orders'); if(navigator.vibrate) navigator.vibrate(5); }} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${currentView === 'orders' ? 'text-teal-600 bg-teal-50 dark:bg-teal-900/20' : 'text-gray-500 dark:text-gray-500'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill={currentView === 'orders' ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={currentView === 'orders' ? 0 : 2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
             <span className="text-[10px] font-bold">Comandas</span>
          </button>
 
-         <button onClick={() => setCurrentView('stock')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${currentView === 'stock' ? 'text-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'text-gray-500 dark:text-gray-500'}`}>
+         <button onClick={() => { setCurrentView('stock'); if(navigator.vibrate) navigator.vibrate(5); }} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${currentView === 'stock' ? 'text-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'text-gray-500 dark:text-gray-500'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill={currentView === 'stock' ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={currentView === 'stock' ? 0 : 2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
             <span className="text-[10px] font-bold">Estoque</span>
          </button>
       </div>
 
       {/* Center FAB (Adjusted position for 3 tabs) */}
-      {currentView === 'dashboard' && (
+      {currentView === 'dashboard' && !settings.securityPin && (
            <motion.button
             initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }}
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => { setIsModalOpen(true); if(navigator.vibrate) navigator.vibrate(10); }}
+            className="md:hidden fixed bottom-24 right-4 z-40 w-14 h-14 bg-gradient-to-br from-rose-500 to-orange-500 text-white rounded-full shadow-xl shadow-rose-500/40 flex items-center justify-center border-2 border-white dark:border-slate-900"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          </motion.button>
+      )}
+      
+      {/* Show FAB if unlocked */}
+      {currentView === 'dashboard' && settings.securityPin && financeUnlocked && (
+           <motion.button
+            initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }}
+            onClick={() => { setIsModalOpen(true); if(navigator.vibrate) navigator.vibrate(10); }}
             className="md:hidden fixed bottom-24 right-4 z-40 w-14 h-14 bg-gradient-to-br from-rose-500 to-orange-500 text-white rounded-full shadow-xl shadow-rose-500/40 flex items-center justify-center border-2 border-white dark:border-slate-900"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>

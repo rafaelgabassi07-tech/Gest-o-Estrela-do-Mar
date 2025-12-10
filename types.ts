@@ -69,6 +69,7 @@ export type ItemStatus = 'pending' | 'delivered';
 
 export interface OrderItem {
   id: string;
+  productId?: string; // ID for stock tracking
   name: string;
   quantity: number;
   price: number;

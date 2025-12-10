@@ -13,6 +13,11 @@ interface SettingsPanelProps {
   onImportData: (expenses: Expense[], settings: AppSettings, orders?: Order[]) => void;
 }
 
+// Helper for haptics
+const vibrate = () => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+};
+
 // --- SUB COMPONENTS (Optimized for Contrast) ---
 
 const GeneralSettings: React.FC<{ settings: AppSettings, onUpdate: (s: AppSettings) => void, onStatus: (t: 'success' | 'error', m: string) => void }> = ({ settings, onUpdate, onStatus }) => {
@@ -75,7 +80,7 @@ const GeneralSettings: React.FC<{ settings: AppSettings, onUpdate: (s: AppSettin
     };
 
     return (
-        <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
+        <div className="space-y-6 animate-fade-in max-w-2xl mx-auto pb-32 md:pb-0">
             <div className="bg-orange-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-orange-100 dark:border-slate-700 text-center">
                 <div className="relative group inline-block">
                     <div 
@@ -125,12 +130,12 @@ const GeneralSettings: React.FC<{ settings: AppSettings, onUpdate: (s: AppSettin
 
 const FinanceSettings: React.FC<{ settings: AppSettings, onUpdate: (s: AppSettings) => void }> = ({ settings, onUpdate }) => {
     return (
-        <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
+        <div className="space-y-6 animate-fade-in max-w-2xl mx-auto pb-32 md:pb-0">
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-100 dark:border-slate-700">
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Meta Mensal (R$)</label>
                 <div className="relative">
                     <span className="absolute left-4 top-3 text-gray-400 font-bold">R$</span>
-                    <input type="number" min="0" value={settings.monthlyGoal} onChange={(e) => onUpdate({ ...settings, monthlyGoal: Number(e.target.value) })} className="block w-full rounded-xl border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xl font-bold py-2.5 pl-12 pr-4 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all" />
+                    <input type="number" min="0" value={settings.monthlyGoal} onChange={(e) => onUpdate({ ...settings, monthlyGoal: Number(e.target.value) })} className="block w-full rounded-xl border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xl font-bold py-2.5 pl-12 pr-4 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all appearance-none" />
                 </div>
             </div>
             
@@ -154,7 +159,7 @@ const FinanceSettings: React.FC<{ settings: AppSettings, onUpdate: (s: AppSettin
                                     step="0.01"
                                     value={settings.fees[item.key as keyof typeof settings.fees]} 
                                     onChange={(e) => onUpdate({ ...settings, fees: { ...settings.fees, [item.key]: Number(e.target.value) } })} 
-                                    className="w-28 rounded-lg border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm py-2 px-3 text-right focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none transition-all" 
+                                    className="w-28 rounded-lg border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm py-2 px-3 text-right focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none transition-all appearance-none" 
                                 />
                             </div>
                         </div>
@@ -208,6 +213,7 @@ const ProductManager: React.FC<{ settings: AppSettings, onUpdate: (s: AppSetting
             onStatus('success', 'Produto adicionado!');
         }
         onUpdate({ ...settings, products: newProducts });
+        vibrate();
         resetForm();
     };
 
@@ -220,15 +226,15 @@ const ProductManager: React.FC<{ settings: AppSettings, onUpdate: (s: AppSetting
         setProdBarcode(prod.barcode || '');
         setProdCat(prod.category); 
     };
-    const handleDelete = (id: string) => { onUpdate({ ...settings, products: settings.products.filter(p => p.id !== id) }); if (editingProdId === id) resetForm(); };
+    const handleDelete = (id: string) => { onUpdate({ ...settings, products: settings.products.filter(p => p.id !== id) }); if (editingProdId === id) resetForm(); vibrate(); };
 
     const filteredProducts = useMemo(() => {
         return (settings.products || []).filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
     }, [settings.products, search]);
 
     return (
-        <div className="flex flex-col h-full gap-6 animate-fade-in relative max-w-2xl mx-auto">
-            {showScanner && <BarcodeScanner onScan={(code) => { setProdBarcode(code); setShowScanner(false); onStatus('success', 'Código lido!'); }} onClose={() => setShowScanner(false)} />}
+        <div className="flex flex-col h-full gap-6 animate-fade-in relative max-w-2xl mx-auto pb-32 md:pb-0">
+            {showScanner && <BarcodeScanner onScan={(code) => { setProdBarcode(code); setShowScanner(false); onStatus('success', 'Código lido!'); vibrate(); }} onClose={() => setShowScanner(false)} />}
             
             {/* Form de Produto Repaginado para Mobile */}
             <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm z-10">
@@ -251,7 +257,7 @@ const ProductManager: React.FC<{ settings: AppSettings, onUpdate: (s: AppSetting
                     <div className="flex gap-3">
                         <div className="relative flex-1">
                             <span className="absolute left-3 top-3.5 text-gray-400 text-xs font-bold">R$</span>
-                            <input type="number" min="0" step="0.50" value={prodPrice} onChange={(e) => setProdPrice(e.target.value)} placeholder="Preço" className="w-full rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-base py-3 px-4 pl-9 outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all placeholder-gray-400" />
+                            <input type="number" min="0" step="0.50" value={prodPrice} onChange={(e) => setProdPrice(e.target.value)} placeholder="Preço" className="w-full rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-base py-3 px-4 pl-9 outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all placeholder-gray-400 appearance-none" />
                         </div>
                         <div className="relative flex-1">
                              <select value={prodCat} onChange={(e) => setProdCat(e.target.value as any)} className="w-full rounded-xl border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-base py-3 px-4 outline-none appearance-none cursor-pointer focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all">
@@ -274,11 +280,11 @@ const ProductManager: React.FC<{ settings: AppSettings, onUpdate: (s: AppSetting
                     <div className="flex gap-3 bg-gray-50 dark:bg-slate-700/50 p-3 rounded-xl border border-dashed border-gray-200 dark:border-slate-600">
                          <div className="flex-1">
                              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Estoque Atual</label>
-                             <input type="number" value={prodStock} onChange={(e) => setProdStock(e.target.value)} placeholder="0" className="w-full rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 p-2 text-sm font-bold text-center" />
+                             <input type="number" value={prodStock} onChange={(e) => setProdStock(e.target.value)} placeholder="0" className="w-full rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 p-2 text-sm font-bold text-center appearance-none" />
                          </div>
                          <div className="flex-1">
                              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Estoque Mínimo</label>
-                             <input type="number" value={prodMinStock} onChange={(e) => setProdMinStock(e.target.value)} placeholder="5" className="w-full rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 p-2 text-sm font-bold text-center" />
+                             <input type="number" value={prodMinStock} onChange={(e) => setProdMinStock(e.target.value)} placeholder="5" className="w-full rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 p-2 text-sm font-bold text-center appearance-none" />
                          </div>
                     </div>
                     
@@ -340,7 +346,7 @@ const SecuritySettings: React.FC<{ settings: AppSettings, onUpdate: (s: AppSetti
     };
 
     return (
-        <div className="space-y-6 animate-fade-in flex flex-col items-center justify-center h-full max-w-sm mx-auto">
+        <div className="space-y-6 animate-fade-in flex flex-col items-center justify-center h-full max-w-sm mx-auto pb-32 md:pb-0">
              <div className="text-center mb-4">
                  <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm border border-blue-100 dark:border-blue-900/50">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
@@ -364,7 +370,7 @@ const SecuritySettings: React.FC<{ settings: AppSettings, onUpdate: (s: AppSetti
                  </div>
              ) : (
                  <div className="flex flex-col gap-4 w-full">
-                     <input type="password" maxLength={4} value={pinInput} onChange={(e) => setPinInput(e.target.value)} placeholder={pinStep === 'enter' ? "Digite 4 números" : "Confirme o PIN"} className="block w-full rounded-2xl border-2 border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-2xl py-4 px-3 focus:border-rose-500 focus:ring-0 outline-none text-center font-black tracking-[0.5em] transition-all placeholder:text-base placeholder:font-normal placeholder:tracking-normal" />
+                     <input type="password" maxLength={4} value={pinInput} onChange={(e) => setPinInput(e.target.value)} placeholder={pinStep === 'enter' ? "Digite 4 números" : "Confirme o PIN"} className="block w-full rounded-2xl border-2 border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-2xl py-4 px-3 focus:border-rose-500 focus:ring-0 outline-none text-center font-black tracking-[0.5em] transition-all placeholder:text-base placeholder:font-normal placeholder:tracking-normal appearance-none" />
                      <button onClick={handlePinLogic} className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl px-6 py-4 font-bold shadow-xl hover:scale-105 transition-transform">{pinStep === 'enter' ? 'Continuar' : 'Salvar Senha'}</button>
                  </div>
              )}
@@ -389,6 +395,7 @@ const DataSettings: React.FC<{ settings: AppSettings, expenses: Expense[], onImp
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         onStatus('success', 'Backup baixado!');
+        vibrate();
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -401,6 +408,7 @@ const DataSettings: React.FC<{ settings: AppSettings, expenses: Expense[], onImp
                 if (json.settings && json.expenses) {
                     onImport(json.expenses, json.settings);
                     onStatus('success', 'Dados restaurados com sucesso!');
+                    vibrate();
                 } else onStatus('error', 'Arquivo inválido.');
             } catch { onStatus('error', 'Erro ao ler arquivo.'); }
         };
@@ -408,7 +416,7 @@ const DataSettings: React.FC<{ settings: AppSettings, expenses: Expense[], onImp
     };
 
     return (
-        <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
+        <div className="space-y-6 animate-fade-in max-w-2xl mx-auto pb-32 md:pb-0">
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 space-y-4">
                  <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-400"><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694-4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" /></svg>
@@ -440,7 +448,7 @@ const DataSettings: React.FC<{ settings: AppSettings, expenses: Expense[], onImp
                         <input type="text" value={deleteInput} onChange={(e) => setDeleteInput(e.target.value)} placeholder="DELETAR" className="w-full text-center border-2 border-red-200 dark:border-red-800 bg-white dark:bg-slate-700 rounded-lg py-2 font-bold text-red-600 outline-none focus:border-red-500" />
                         <div className="flex gap-2">
                              <button onClick={() => { setIsDeleteArmed(false); setDeleteInput(''); }} className="flex-1 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-white font-bold py-2 rounded-lg">Cancelar</button>
-                             <button disabled={deleteInput !== 'DELETAR'} onClick={() => { if(deleteInput === 'DELETAR') { onClear(); setIsDeleteArmed(false); setDeleteInput(''); onStatus('success', 'Dados apagados'); } }} className="flex-[2] bg-red-600 text-white font-bold py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-600/30">Confirmar Exclusão</button>
+                             <button disabled={deleteInput !== 'DELETAR'} onClick={() => { if(deleteInput === 'DELETAR') { onClear(); setIsDeleteArmed(false); setDeleteInput(''); onStatus('success', 'Dados apagados'); vibrate(); } }} className="flex-[2] bg-red-600 text-white font-bold py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-600/30">Confirmar Exclusão</button>
                         </div>
                     </div>
                 ) : <button onClick={() => setIsDeleteArmed(true)} className="w-full text-red-500 dark:text-red-400 font-bold py-3 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">Apagar Todos os Dados</button>}
@@ -521,7 +529,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
                          {menuItems.filter(item => item.section === section).map(item => (
                              <button 
                                  key={item.id}
-                                 onClick={() => setActiveView(item.id as ViewState)}
+                                 onClick={() => { setActiveView(item.id as ViewState); vibrate(); }}
                                  className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group ${activeView === item.id ? 'bg-white dark:bg-slate-800 shadow-sm text-rose-500' : 'hover:bg-gray-100 dark:hover:bg-slate-800/50 text-gray-600 dark:text-gray-400'}`}
                              >
                                  <div className="flex items-center gap-3">
@@ -540,7 +548,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
 
           <div className="p-6 text-center border-t border-gray-200 dark:border-slate-800">
                 <p className="text-xs font-bold text-gray-900 dark:text-white">Quiosque Estrela do Mar</p>
-                <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5">Versão 2.3.0 • PWA</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5">Versão 2.4.0 • PWA</p>
           </div>
       </div>
 
