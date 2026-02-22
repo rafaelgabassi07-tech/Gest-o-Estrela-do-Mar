@@ -39,11 +39,13 @@ export interface Product {
   id: string;
   name: string;
   price: number;
+  costPrice?: number; // Preço de custo para cálculo de lucro
   category: 'food' | 'drink' | 'other';
-  stock?: number; // Quantidade atual
-  minStock?: number; // Alerta de estoque mínimo
-  unit?: 'un' | 'kg' | 'L'; // Unidade de medida
+  stock: number; // Quantidade atual
+  minStock: number; // Alerta de estoque mínimo
+  unit: 'un' | 'kg' | 'L'; // Unidade de medida
   barcode?: string; // Código de barras (EAN-13, QR, etc)
+  imageUrl?: string;
 }
 
 export interface AppSettings {
@@ -87,7 +89,10 @@ export interface Order {
   openedAt: string; // ISO String
   closedAt?: string;
   total: number;
+  subtotal: number;
+  discount: number;
+  serviceFeeAmount: number;
   paymentMethod?: PaymentMethod;
-  discount?: number;
-  serviceFee?: boolean; // 10%
+  serviceFee: boolean; // 10%
+  customerCount?: number; // Quantidade de pessoas na mesa
 }

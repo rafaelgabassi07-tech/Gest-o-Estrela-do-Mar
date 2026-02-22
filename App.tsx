@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import Toast, { ToastMessage } from './components/Toast';
 import ExpenseForm from './components/ExpenseForm';
 import ExpenseList from './components/ExpenseList';
 import MonthlySummary from './components/MonthlySummary';
@@ -12,7 +13,7 @@ import OrdersPage from './components/OrdersPage';
 import StockPage from './components/StockPage';
 import { CURRENT_YEAR, START_YEAR } from './constants';
 import { useExpenseManager, useSettingsManager, useTheme, useLockScreen, useOrderManager } from './hooks';
-import { generateId, getLocalDateString } from './utils';
+import { generateId, getLocalDateString, formatCurrency } from './utils';
 import { ExpenseCategory, Order, PaymentMethod } from './types';
 
 const App: React.FC = () => {
@@ -27,6 +28,17 @@ const App: React.FC = () => {
   // App starts at 'orders' (Comandas) by default now
   const [currentView, setCurrentView] = useState<'dashboard' | 'orders' | 'stock'>('orders');
   const [financeUnlocked, setFinanceUnlocked] = useState(false);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (type: 'success' | 'error' | 'info', message: string) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => removeToast(id), 3000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -44,6 +56,9 @@ const App: React.FC = () => {
       const isValid = validatePin(pin, settings.securityPin);
       if (isValid) {
           setFinanceUnlocked(true);
+          addToast('success', 'Acesso liberado!');
+      } else {
+          addToast('error', 'PIN incorreto!');
       }
       return isValid;
   };
@@ -96,8 +111,11 @@ const App: React.FC = () => {
 
     if (stockUpdated) {
         setSettings({ ...settings, products: currentProducts });
+        addToast('info', 'Estoque atualizado.');
     }
     
+    addToast('success', `Comanda fechada! +${formatCurrency(updatedOrder.total)}`);
+
     // Haptic Feedback for success
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate([50, 50, 50]);
@@ -204,6 +222,7 @@ const App: React.FC = () => {
                    onUpdateOrder={updateOrder}
                    onCloseOrder={handleCloseOrder}
                    onDeleteOrder={deleteOrder}
+                   onShowToast={addToast}
                  />
               </motion.div>
             ) : (
@@ -212,12 +231,15 @@ const App: React.FC = () => {
                    products={settings.products || []}
                    onUpdateStock={updateProductStock}
                    onOpenSettings={() => setIsSettingsOpen(true)}
+                   onShowToast={addToast}
                  />
               </motion.div>
             )}
           </AnimatePresence>
         </LayoutGroup>
       </main>
+
+      <Toast toasts={toasts} removeToast={removeToast} />
 
       {/* Bottom Navigation Bar (Mobile) */}
       <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 p-2 md:hidden z-50 flex justify-around items-center pb-safe shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
@@ -238,18 +260,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Center FAB (Adjusted position for 3 tabs) */}
-      {currentView === 'dashboard' && !settings.securityPin && (
-           <motion.button
-            initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }}
-            onClick={() => { setIsModalOpen(true); if(navigator.vibrate) navigator.vibrate(10); }}
-            className="md:hidden fixed bottom-24 right-4 z-40 w-14 h-14 bg-gradient-to-br from-rose-500 to-orange-500 text-white rounded-full shadow-xl shadow-rose-500/40 flex items-center justify-center border-2 border-white dark:border-slate-900"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-          </motion.button>
-      )}
-      
-      {/* Show FAB if unlocked */}
-      {currentView === 'dashboard' && settings.securityPin && financeUnlocked && (
+      {currentView === 'dashboard' && (!settings.securityPin || financeUnlocked) && (
            <motion.button
             initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }}
             onClick={() => { setIsModalOpen(true); if(navigator.vibrate) navigator.vibrate(10); }}
@@ -276,6 +287,7 @@ const App: React.FC = () => {
              if(newOrders) setAllOrders(newOrders);
              setIsSettingsOpen(false); 
            }}
+           onShowToast={addToast}
          />
       </Modal>
     </div>

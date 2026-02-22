@@ -11,6 +11,7 @@ interface SettingsPanelProps {
   onClearData: () => void;
   expenses: Expense[];
   onImportData: (expenses: Expense[], settings: AppSettings, orders?: Order[]) => void;
+  onShowToast?: (type: 'success' | 'error' | 'info', message: string) => void;
 }
 
 // Helper for haptics
@@ -461,9 +462,8 @@ const DataSettings: React.FC<{ settings: AppSettings, expenses: Expense[], onImp
 
 type ViewState = 'menu' | 'general' | 'finance' | 'menu_items' | 'security' | 'data';
 
-const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSettings, onClearData, expenses, onImportData }) => {
+const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSettings, onClearData, expenses, onImportData, onShowToast }) => {
   const [activeView, setActiveView] = useState<ViewState>('menu');
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
   // Responsive check
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
@@ -479,8 +479,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
   }, [activeView]);
 
   const showStatus = (type: 'success' | 'error', text: string) => {
-    setStatusMessage({ type, text });
-    setTimeout(() => setStatusMessage(null), 3000);
+    onShowToast?.(type, text);
   };
 
   const menuItems = [
@@ -506,14 +505,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
 
   return (
     <div className="h-full w-full relative bg-white dark:bg-slate-900 md:flex overflow-hidden">
-      <AnimatePresence>
-        {statusMessage && (
-          <motion.div initial={{ opacity: 0, y: -20, x: '-50%' }} animate={{ opacity: 1, y: 10, x: '-50%' }} exit={{ opacity: 0, y: -20, x: '-50%' }} className={`absolute top-0 left-1/2 transform -translate-x-1/2 z-[60] px-6 py-3 rounded-full shadow-xl font-bold text-sm text-white ${statusMessage.type === 'success' ? 'bg-teal-500' : 'bg-rose-500'}`}>
-            {statusMessage.text}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* LEFT COLUMN: MENU (Always visible on Desktop, Conditional on Mobile) */}
       <div className={`md:w-72 bg-gray-50 dark:bg-slate-900/50 md:border-r border-gray-200 dark:border-slate-800 flex flex-col h-full absolute md:relative w-full z-10 transition-transform duration-300 ${!isDesktop && activeView !== 'menu' ? '-translate-x-full' : 'translate-x-0'}`}>
           <div className="p-6 pb-2">

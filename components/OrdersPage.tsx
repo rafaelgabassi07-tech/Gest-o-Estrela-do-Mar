@@ -13,9 +13,10 @@ interface OrdersPageProps {
   onUpdateOrder: (order: Order) => void;
   onCloseOrder: (order: Order, paymentMethod: PaymentMethod) => void;
   onDeleteOrder: (id: string) => void;
+  onShowToast?: (type: 'success' | 'error' | 'info', message: string) => void;
 }
 
-const OrdersPage: React.FC<OrdersPageProps> = ({ orders, onAddOrder, onUpdateOrder, onCloseOrder, onDeleteOrder }) => {
+const OrdersPage: React.FC<OrdersPageProps> = ({ orders, onAddOrder, onUpdateOrder, onCloseOrder, onDeleteOrder, onShowToast }) => {
   const [activeTab, setActiveTab] = useState<OrderStatus>('open');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,8 +68,10 @@ const OrdersPage: React.FC<OrdersPageProps> = ({ orders, onAddOrder, onUpdateOrd
   const handleSaveFromForm = (order: Order) => {
     if (editingOrder && orders.find(o => o.id === editingOrder.id)) {
       onUpdateOrder(order);
+      onShowToast?.('success', 'Comanda atualizada!');
     } else {
       onAddOrder(order);
+      onShowToast?.('success', 'Comanda aberta com sucesso!');
     }
     setIsModalOpen(false);
   };
@@ -76,6 +79,10 @@ const OrdersPage: React.FC<OrdersPageProps> = ({ orders, onAddOrder, onUpdateOrd
   const handleCloseFromForm = (order: Order, paymentMethod: PaymentMethod) => {
     // Pass the full order object up
     onCloseOrder(order, paymentMethod);
+    // Toast is handled in App.tsx for closeOrder to cover stock updates too, 
+    // but we can add a specific one here if needed, or rely on parent.
+    // Let's rely on parent for the "Closed" success to avoid double toasts if parent does it.
+    // But for now, let's just close the modal.
     setIsModalOpen(false);
   };
 

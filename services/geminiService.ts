@@ -32,7 +32,7 @@ export async function getMonthlyAnalysis(data: string): Promise<string> {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash', // Optimized for speed and cost
+      model: 'gemini-2.5-flash-latest', // Optimized for speed and cost
       contents: prompt,
       config: {
         temperature: 0.7,
